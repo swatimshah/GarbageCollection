@@ -17,13 +17,13 @@ def downsize_image(my_input_dir, my_output_dir, quality=85):
         for my_input_file in my_images:
             print(f"Image {my_input_file}")
             with Image.open(my_input_file) as img:
-                rotated_img = img.rotate(270, expand=True)
-                resized_img = rotated_img.resize((300, 400))
+                #rotated_img = img.rotate(270, expand=True)
+                resized_img = img.resize((400, 300))
 
                 # Save with optimized quality
                 # Not recommended for cross-platform compatibility
                 my_output_file = my_output_dir + "/" + entry + "/" + str(my_input_file.stem) + "_resized"
-                resized_img.save(my_output_file, "JPEG", optimize=True, quality=quality)
+                resized_img.save(my_output_file + ".JPEG", optimize=True, quality=quality)
                 print(f"Image saved to: {my_output_file}")
 
 # Example Usage on Redmi
