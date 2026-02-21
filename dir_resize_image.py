@@ -3,6 +3,15 @@ import os
 import numpy as np
 from pathlib import Path
 from tensorflow.keras.preprocessing import image
+import random
+from sklearn.model_selection import train_test_split
+from keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras import layers, models
+import tensorflow as tf
+from keras.layers import Input, Dense, concatenate
+from matplotlib import pyplot
+
 
 def count_files_os(directory_path):
     count = 0
@@ -15,7 +24,7 @@ def downsize_image(my_input_dir, my_output_dir, y_train, quality=85):
     """
     Resizes an image maintaining aspect ratio and compresses it.
     """
-    img_batch = np.empty((0, 300, 400, 3), dtype=float)
+    img_batch = np.empty((0, 200, 150, 3), dtype=float)
     count = 0
     training_data_list = []
 
@@ -29,7 +38,7 @@ def downsize_image(my_input_dir, my_output_dir, y_train, quality=85):
         for my_input_file in my_images:
             print(f"Image {my_input_file}")
             with Image.open(my_input_file) as img:
-                resized_img = img.resize((400, 300))
+                resized_img = img.resize((200, 150))
 
                 # Save with optimized quality
                 # Not recommended for cross-platform compatibility
@@ -40,13 +49,11 @@ def downsize_image(my_input_dir, my_output_dir, y_train, quality=85):
 
                 # 1. Convert to array and Normalize (0-1)
                 img_array = image.img_to_array(resized_img) / 255.0
-
-                # 2. Add batch dimension: (300, 400, 3) -> (1, 300, 400, 3)
-                img_exp = np.expand_dims(img_array, axis=0)
-                print(img_exp.shape)
+                print(img_array.shape)
                 
                 try:
-                    my_image = np.array(img_exp)
+                    my_image = np.array(img_array)
+                    print(result[count])
                     # Create a dictionary for each image and its label
                     image_data = {
                         'image_data': my_image,
@@ -58,7 +65,81 @@ def downsize_image(my_input_dir, my_output_dir, y_train, quality=85):
                
                 count += 1 
 
-    print(training_data_list[50]['label'])	
+    print(training_data_list[50]['label'])
+
+    # Randomize the input
+    seed_value = 42
+
+    # Set the seed before shuffling
+    random.seed(seed_value) 
+
+    # Shuffle the list in-place
+    random.shuffle(training_data_list)	
+
+    # divide training and test set
+    train_list, test_list = train_test_split(training_data_list, test_size=0.3, random_state=42)
+
+    data = [None] * len(train_list) 
+    labels = [None] * len(train_list) 
+    test_data = [None] * len(test_list) 
+    test_label = [None] * len(test_list) 	
+
+    for i in range(len(train_list)):
+        data[i] = train_list[i]['image_data']
+        print(data[i])
+
+    for j in range(len(train_list)):
+        labels[j] = np.array(train_list[j]['label']).reshape(-1)
+        print(labels[j])
+
+    for k in range(len(test_list)):
+        test_data[k] = test_list[k]['image_data']
+        print(test_data[k])
+
+    for l in range(len(test_list)):
+        test_label[l] = np.array(test_list[l]['label']).reshape(-1)
+        print(test_label[l])
+
+    reshaped_data = np.array(data).reshape(len(data), 200, 150, 3)    
+    reshaped_labels = np.array(labels).reshape(len(labels))    
+    reshaped_test_data = np.array(test_data).reshape(len(test_data), 200, 150, 3)    
+    reshaped_test_labels = np.array(test_label).reshape(len(test_label))    
+
+
+    # train the cnn
+    model = Sequential()
+
+    # Add Convolutional and Pooling layers for feature extraction
+    model.add(Conv2D(48, (5, 5), activation='relu', input_shape=(200, 150, 3)))
+    model.add(MaxPooling2D((2, 2)))
+    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(MaxPooling2D((2, 2)))
+    model.add(Conv2D(64, (2, 2), activation='relu'))
+    # Flatten the 3D feature maps to a 1D vector for the fully connected layers
+    model.add(Flatten())
+    # Add Fully Connected (Dense) layers for classification
+    model.add(Dense(64, activation='relu'))
+    model.add(Dense(10, activation='softmax')) # Output layer for 10 classes
+
+    # View the model summary
+    model.summary()
+
+    model.compile(optimizer='adam',
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+            metrics=['accuracy'])
+
+    # Train the model using the prepared data
+    history = model.fit(reshaped_data, reshaped_labels, verbose=1, epochs=75, validation_data=(reshaped_test_data, reshaped_test_labels), batch_size=5)
+
+    # plot training and validation history
+    pyplot.plot(history.history['loss'], label='tr_loss')
+    pyplot.plot(history.history['val_loss'], label='val_loss')
+    pyplot.plot(history.history['accuracy'], label='tr_accuracy')
+    pyplot.plot(history.history['val_accuracy'], label='val_accuracy')
+    pyplot.legend()
+    pyplot.xlabel("No of iterations")
+    pyplot.ylabel("Accuracy and loss")
+    pyplot.show()
 
 
 # Example Usage on Redmi
