@@ -6,12 +6,18 @@ from tensorflow.keras.preprocessing import image
 import random
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, GlobalAveragePooling2D, GlobalMaxPooling2D
 from tensorflow.keras import layers, models
 import tensorflow as tf
 from keras.layers import Input, Dense, concatenate
 from matplotlib import pyplot
+from numpy.random import seed
+from tensorflow.random import set_seed
+from tensorflow.keras.optimizers import Adam
 
+# setting the seed
+seed(1)
+set_seed(1)
 
 def count_files_os(directory_path):
     count = 0
@@ -111,25 +117,25 @@ def downsize_image(my_input_dir, my_output_dir, y_train, quality=85):
 
     # Add Convolutional and Pooling layers for feature extraction
     model.add(Conv2D(48, (5, 5), activation='relu', input_shape=(200, 150, 3)))
-    model.add(MaxPooling2D((2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D((2, 2)))
-    model.add(Conv2D(64, (2, 2), activation='relu'))
+    model.add(MaxPooling2D((3, 3)))
+    model.add(Conv2D(32, (3, 3), activation='relu'))
+    model.add(MaxPooling2D((3, 3)))
     # Flatten the 3D feature maps to a 1D vector for the fully connected layers
-    model.add(Flatten())
+    model.add(GlobalAveragePooling2D())
     # Add Fully Connected (Dense) layers for classification
-    model.add(Dense(64, activation='relu'))
-    model.add(Dense(10, activation='softmax')) # Output layer for 10 classes
+    model.add(Dense(40, activation='relu'))
+    model.add(Dense(3, activation='softmax')) # Output layer for 10 classes
 
     # View the model summary
     model.summary()
 
-    model.compile(optimizer='adam',
+    model.compile(optimizer=Adam(learning_rate=0.0004),
         loss=tf.keras.losses.SparseCategoricalCrossentropy(),
             metrics=['accuracy'])
 
     # Train the model using the prepared data
-    history = model.fit(reshaped_data, reshaped_labels, verbose=1, epochs=75, validation_data=(reshaped_test_data, reshaped_test_labels), batch_size=5)
+    history = model.fit(reshaped_data, reshaped_labels, verbose=1, epochs=600, validation_data=(reshaped_test_data, reshaped_test_labels), batch_size=5)
+
 
     # plot training and validation history
     pyplot.plot(history.history['loss'], label='tr_loss')
